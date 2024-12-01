@@ -1,22 +1,22 @@
-import pandas as pd
-from Board_State import State
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 
 class ChessDataset(Dataset):
-    def __init__(self, csv_file):
+    def __init__(self, file_path):
         """
         Args:
-            csv_file (str): Path to the CSV file containing FEN strings and evaluations.
+            file_path (str): Path to the npz file containing state tensors and evaluations.
         """
-        self.data = pd.read_csv(csv_file)
-        self.state_converter = State()
+        data = np.load(file_path)
+        self.X = data['X']
+        self.y = data['y']
 
     def __len__(self):
         """
         Returns the total number of samples in the dataset.
         """
-        return len(self.data)
+        return len(self.y)
 
     def __getitem__(self, idx):
         """
@@ -27,29 +27,16 @@ class ChessDataset(Dataset):
 
         Returns:
             tuple: (board_tensor, evaluation) where:
-                - board_tensor (torch.Tensor): The 5x8x8 board representation.
-                - evaluation (float): The evaluation value.
+                - X_tensor (torch.Tensor): The 5x8x8 board representation.
+                - y_tensor (torch.Tensor): The evaluation value.
         """
-        # Extract FEN string and evaluation
-        fen = self.data.iloc[idx]['FEN']
-        evaluation = self.data.iloc[idx]['Evaluation']
-
-        # Generate board tensor
-        self.state_converter.board.set_fen(fen)
-        board_tensor = self.state_converter.board_to_tensor()
-
-        # Convert evaluation
-        if isinstance(evaluation, str) and evaluation.startswith('#'):
-            # Mate evaluations: '#' indicates mate, positive for white and negative for black
-            eval_value = 10000.0 if '+' in evaluation else -10000.0
-        else:
-            eval_value = float(evaluation)
+        
 
         # Convert to PyTorch tensors
-        board_tensor = torch.tensor(board_tensor, dtype=torch.float32)
-        eval_value = torch.tensor(eval_value, dtype=torch.float32)
+        X_tensor = torch.tensor(self.X[idx], dtype=torch.float32)
+        y_tensor = torch.tensor(self.y[idx], dtype=torch.float32)
 
-        return board_tensor, eval_value
+        return X_tensor, y_tensor
 
 
 
