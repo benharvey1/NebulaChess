@@ -9,73 +9,130 @@ class State():
         else:
             self.board = board
 
-    def board_to_tensor(self):
+    def board_to_vector(self):
         """
-        Converts current board state into a 5-layer tensor.
+        Converts current board state into a flat vector of length 901.
 
         Input:
             - object from board class (chess.Board())
 
         Output:
-            - Returns a 5x8x8 numpy array representing the board:
-                * Layers 0-3: Encoded 4-bit representation of pieces on the board.
-                * Layer 4: Indicates player turn (0 = white, 1 = black).
+            - Returns a (901,) numpy array representing the board
         """
-        
+
+        board_vector = np.zeros(901, dtype=np.uint8)
 
         # check board is valid
         assert self.board.is_valid()
 
-        state_tensor = np.zeros((5, 8, 8), dtype=np.uint8)
-        board_tensor = np.zeros(64, dtype=np.uint8)
+        # Each piece type assigned a row
+        pieces = {"P": 0, "N": 1, "B": 2, "R": 3, "Q": 4, "K": 5, "p": 6, "n":7, "b":8, "r":9, "q":10, "k": 11}
 
-        # White pieces numbered from 1-6. 7 represents white rooks when castling available.
-        # Black pieces numbered from 9-14. 15 represents black rooks when castling available.
-        # 8 represents possible en passant squares
-        pieces = {"P": 1, "N": 2, "B": 3, "R": 4, "Q": 5, "K": 6, "p": 9, "n":10, "b":11, "r":12, "q":13, "k": 14}
+        # Each row (of first 12 rows) of matrix corresponds to particular piece type
+        # Each column represents a square on the board
+        # Second last row shows all squares white pieces can move to
+        # Last row shows all squares black pieces can move to 
+        board_matrix = np.zeros((14, 64), dtype=np.uint8)
 
-        # Loop over all squares on board
         for i in range(64):
-            piece = self.board.piece_at(i)   # returns piece on each square. None if square empty
+            piece = self.board.piece_at(i)
 
             if piece is not None:
-                board_tensor[i] = pieces[piece.symbol()]
+                row = pieces[piece.symbol()]
+                board_matrix[row][i] = 1
 
-        # Check castling rights
+        turn = self.board.turn
+
+        self.board.turn = chess.WHITE
+        for move in self.board.legal_moves:
+            board_matrix[12][move.to_square] = 1
+
+        self.board.turn = chess.BLACK
+        for move in self.board.legal_moves:
+            board_matrix[13][move.to_square] = 1
+
+        board_vector[:896] = board_matrix.flatten() # (14,64) -> (896,)
+
+        # Check castling rights 
         if self.board.has_kingside_castling_rights(chess.WHITE):
-            board_tensor[7] = 7
+            board_vector[896] = 1
         if self.board.has_queenside_castling_rights(chess.WHITE):
-            board_tensor[0] = 7
+            board_vector[897] = 1
         if self.board.has_kingside_castling_rights(chess.BLACK):
-            board_tensor[63] = 15
+            board_vector[898] = 1
         if self.board.has_queenside_castling_rights(chess.BLACK):
-            board_tensor[56] = 15
+            board_vector[899] = 1
 
-        # Check en passant 
-        if self.board.ep_square is not None:
-            board_tensor[self.board.ep_square] = 8
+        # Bit to denote whose turn (0=white, 1=black)
+        board_vector[900] = turn*1.0
 
-        board_tensor = board_tensor.reshape(8,8)
+        return board_vector
 
-        # Convert each number to binary and split bits between first 4 layers of state_tensor
-        # Each number 0-15 can be represented using 4-bits (0: 0000, 1: 0001, 2: 0010, 3: 0011, ... , 14: 1110, 15: 1111)
-        # First layer contains the first bits, second layer contains second bits etc.
 
-        # x >> y returns x with bits shifted to the right by y place. &1 means we only consider rightmost bit
-        state_tensor[0] = (board_tensor >> 3) & 1
-        state_tensor[1] = (board_tensor >> 2) & 1
-        state_tensor[2] = (board_tensor >> 1) & 1
-        state_tensor[3] = (board_tensor >> 0) & 1
+    def board_to_tensor(self):
+        """
+        Converts current board state into a 19-layer tensor.
 
-        # Final layer denotes whose turn it is (1 = white, 0 = black)
-        state_tensor[4] = self.board.turn*1.0
+        Input:
+            - object from board class (chess.Board())
 
-        return state_tensor
-    
-    def legal_moves(self):
-        """Returns list of the legal moves for current board state"""
-        return list(self.board.legal_moves)
+        Output:
+            - Returns a 19x8x8 numpy array representing the board:
+                * Layers 0-11: Encoded positions of all pieces.
+                * Layers 12-13: Encode possible moves
+                * Layers 14-17: Indicates castling rightd
+                * Layer 18: Indicates player turn (0 = white, 1 = black).
+        """
 
+        board_tensor = np.zeros((19, 8, 8), dtype=np.uint8)
+
+        # check board is valid
+        assert self.board.is_valid()
+
+        # Each piece type assigned a row
+        pieces = {"P": 0, "N": 1, "B": 2, "R": 3, "Q": 4, "K": 5, "p": 6, "n":7, "b":8, "r":9, "q":10, "k": 11}
+
+        # Each row (of first 12 rows) of matrix corresponds to particular piece type
+        # Each column represents a square on the board
+        # Second last row shows all squares white pieces can move to
+        # Last row shows all squares black pieces can move to 
+        board_matrix = np.zeros((14, 64), dtype=np.uint8)
+
+        for i in range(64):
+            piece = self.board.piece_at(i)
+
+            if piece is not None:
+                row = pieces[piece.symbol()]
+                board_matrix[row][i] = 1
+
+        turn = self.board.turn
+
+        self.board.turn = chess.WHITE
+        for move in self.board.legal_moves:
+            board_matrix[12][move.to_square] = 1
+
+        self.board.turn = chess.BLACK
+        for move in self.board.legal_moves:
+            board_matrix[13][move.to_square] = 1
+        
+        
+        board_matrix = board_matrix.reshape(14,8,8)
+        board_tensor[:14] = board_matrix
+
+        # Castling rights
+        if self.board.has_kingside_castling_rights(chess.WHITE):
+            board_tensor[14] = 1
+        if self.board.has_queenside_castling_rights(chess.WHITE):
+            board_tensor[15] = 1
+        if self.board.has_kingside_castling_rights(chess.BLACK):
+            board_tensor[16] = 1
+        if self.board.has_queenside_castling_rights(chess.BLACK):
+            board_tensor[17] = 1
+
+        # Final layer denotes whose turn it is (0 = white, 1 = black)
+        board_tensor[18] = turn*1.0
+
+        return board_tensor
 
 
 if __name__ == "__main__":

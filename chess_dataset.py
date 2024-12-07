@@ -27,7 +27,7 @@ class ChessDataset(Dataset):
 
         Returns:
             tuple: (board_tensor, evaluation) where:
-                - X_tensor (torch.Tensor): The 5x8x8 board representation.
+                - X_tensor (torch.Tensor): The board representation.
                 - y_tensor (torch.Tensor): The evaluation value.
         """
         
