@@ -41,7 +41,7 @@ class State():
                 row = pieces[piece.symbol()]
                 board_matrix[row][i] = 1
 
-        turn = self.board.turn
+        original_turn = self.board.turn
 
         self.board.turn = chess.WHITE
         for move in self.board.legal_moves:
@@ -51,6 +51,7 @@ class State():
         for move in self.board.legal_moves:
             board_matrix[13][move.to_square] = 1
 
+        self.board.turn = original_turn
         board_vector[:896] = board_matrix.flatten() # (14,64) -> (896,)
 
         # Check castling rights 
@@ -64,7 +65,7 @@ class State():
             board_vector[899] = 1
 
         # Bit to denote whose turn (0=white, 1=black)
-        board_vector[900] = turn*1.0
+        board_vector[900] = original_turn*1.0
 
         return board_vector
 
@@ -80,7 +81,7 @@ class State():
             - Returns a 19x8x8 numpy array representing the board:
                 * Layers 0-11: Encoded positions of all pieces.
                 * Layers 12-13: Encode possible moves
-                * Layers 14-17: Indicates castling rightd
+                * Layers 14-17: Indicates castling rights
                 * Layer 18: Indicates player turn (0 = white, 1 = black).
         """
 
@@ -105,7 +106,7 @@ class State():
                 row = pieces[piece.symbol()]
                 board_matrix[row][i] = 1
 
-        turn = self.board.turn
+        original_turn = self.board.turn
 
         self.board.turn = chess.WHITE
         for move in self.board.legal_moves:
@@ -115,6 +116,7 @@ class State():
         for move in self.board.legal_moves:
             board_matrix[13][move.to_square] = 1
         
+        self.board.turn = original_turn
         
         board_matrix = board_matrix.reshape(14,8,8)
         board_tensor[:14] = board_matrix
@@ -130,7 +132,7 @@ class State():
             board_tensor[17] = 1
 
         # Final layer denotes whose turn it is (0 = white, 1 = black)
-        board_tensor[18] = turn*1.0
+        board_tensor[18] = original_turn*1.0
 
         return board_tensor
 

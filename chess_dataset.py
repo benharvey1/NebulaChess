@@ -8,6 +8,7 @@ class ChessDataset(Dataset):
         Args:
             file_path (str): Path to the npz file containing state tensors and evaluations.
         """
+        
         data = np.load(file_path)
         self.X = data['X']
         self.y = data['y']
@@ -30,14 +31,11 @@ class ChessDataset(Dataset):
                 - X_tensor (torch.Tensor): The board representation.
                 - y_tensor (torch.Tensor): The evaluation value.
         """
-        
-
-        # Convert to PyTorch tensors
         X_tensor = torch.tensor(self.X[idx], dtype=torch.float32)
         y_tensor = torch.tensor(self.y[idx], dtype=torch.float32)
 
         return X_tensor, y_tensor
-
+        
 
 
 
