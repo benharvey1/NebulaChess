@@ -72,20 +72,20 @@ class State():
 
     def board_to_tensor(self):
         """
-        Converts current board state into a 19-layer tensor.
+        Converts current board state into a 16-layer tensor.
 
         Input:
             - object from board class (chess.Board())
 
         Output:
-            - Returns a 19x8x8 numpy array representing the board:
+            - Returns a 16x8x8 numpy array representing the board:
                 * Layers 0-11: Encoded positions of all pieces.
                 * Layers 12-13: Encode possible moves
-                * Layers 14-17: Indicates castling rights
-                * Layer 18: Indicates player turn (0 = white, 1 = black).
+                * Layers 14: Indicates castling rights
+                * Layer 15: Indicates player turn (0 = white, 1 = black).
         """
 
-        board_tensor = np.zeros((19, 8, 8), dtype=np.uint8)
+        board_tensor = np.zeros((16, 8, 8), dtype=np.uint8)
 
         # check board is valid
         assert self.board.is_valid()
@@ -123,16 +123,16 @@ class State():
 
         # Castling rights
         if self.board.has_kingside_castling_rights(chess.WHITE):
-            board_tensor[14] = 1
+            board_tensor[14,7,5] = 1
         if self.board.has_queenside_castling_rights(chess.WHITE):
-            board_tensor[15] = 1
+            board_tensor[14,7,3] = 1
         if self.board.has_kingside_castling_rights(chess.BLACK):
-            board_tensor[16] = 1
+            board_tensor[14,0,5] = 1
         if self.board.has_queenside_castling_rights(chess.BLACK):
-            board_tensor[17] = 1
+            board_tensor[14,0,3] = 1
 
         # Final layer denotes whose turn it is (0 = white, 1 = black)
-        board_tensor[18] = original_turn*1.0
+        board_tensor[15, :, :] = int(original_turn)
 
         return board_tensor
 

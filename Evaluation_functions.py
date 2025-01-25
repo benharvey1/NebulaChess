@@ -231,8 +231,57 @@ class ClassicValuator:
             board.turn = original_turn
 
         return mobility_weight * (white_mobility - black_mobility)
+    
+    def attackers(self, board, square, colour):
+        """
+        Returns set of squares for the set of attackers of the given color for the given square
+        """
+        return board.attackers(colour, square)
+    
+    def evaluate_exchanges(self, board, piece_value, attacker_squares, defender_squares):
+        """
+        Calculates material change from an exchange
+        """
+
+        attackers = [board.piece_at(square) for square in attacker_squares]
+        attacker_values = [self.piece_values[piece.symbol()] for piece in attackers]
+
+        defenders = [board.piece_at(square) for square in defender_squares]
+        defender_values = [self.piece_values[piece.symbol()] for piece in defenders]
 
         
+        sorted_attackers = sorted(zip(attackers, attacker_values), key=lambda x:x[1])
+        sorted_defenders = sorted(zip(defenders, defender_values), key=lambda x:x[1])
+
+        net_score = 0
+        current_piece_value = piece_value
+
+        # Simulate the exchange
+        while sorted_attackers:
+            # Attacker (of lowest material value) takes
+            net_score -= current_piece_value
+            attacker = sorted_attackers.pop(0)   # weakest attacker
+            attacker_value = attacker[1]
+
+            if not defender_values:
+                break
+
+            # Defender considers retaliation
+            defender_value = sorted_defenders[0][1]  # Get the weakest defender
+            if defender_value > attacker_value:
+            # Defender won't capture if it results in a material loss
+                break
+
+            # Defender retaliates
+            defender_values.pop(0)  # Remove this defender from the list
+            net_score += attacker_value # Gain from capturing attacker
+
+            # Update current piece value for the next iteration
+            current_piece_value = self.piece_values[attacker.symbol()]
+
+        pass
+
+    
     def __call__(self, board):
         # TODO: Add King safety
 
@@ -253,6 +302,9 @@ class ClassicValuator:
                         piece_symbol = "K_endgame"
                     white_score += self.piece_values[piece_symbol]
                     white_score += self.piece_tables[piece_symbol][square]
+                    attackers = self.attackers(board, square, chess.BLACK)
+                    defenders = self.attackers(board, square, chess.WHITE)
+    
 
                 elif piece_symbol in black_pieces:
                     if piece_symbol == "k" and endgame:

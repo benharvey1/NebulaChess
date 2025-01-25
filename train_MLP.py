@@ -8,14 +8,6 @@ import torch.optim as optim
 from torch.utils.data import Subset, DataLoader
 from sklearn.model_selection import train_test_split
 
-# NOTE : Training not going to well atm
-# Things to try...
-    # TODO: try training with cutoff at +- 1000 eval
-    # TODO: try training without the 'possible moves' in feature rep 
-    # TODO: try training with more data (smooth out distribution)
-    # TODO: Might have to try different feature rep (piece co-ordinates)
-    # TODO: try different transformations (tanh, arctan etc.)
-
 
 class MLP(nn.Module):
     """Artificial Neural Network"""
@@ -32,7 +24,7 @@ class MLP(nn.Module):
     def forward(self, x):
         """Input vector of size 901.
         3 hidden layers with 2048 units. ReLU activation and dropout 
-        with probability 0.25 between each layer. Tanh activation for output layer. 
+        with probability 0.3 between each layer. Tanh activation for output layer. 
         """
         x = self.dropout(F.relu(self.fc1(x)))   # input: (batch_size,901), output: (batch_size,2048)
         x = self.dropout(F.relu(self.fc2(x)))   # input: (batch_size,2048), output: (batch_size,2048)
@@ -119,29 +111,16 @@ def test_loop(dataloader, model, loss_fn):
 if __name__ == "__main__":
     import wandb
 
-    input_path = 'processed_vector_data.npz'
+    input_path = 'Data/processed_vector_data.npz'
     dataset = ChessDataset(input_path)
     wandb.init(project="chess-ai", name=f"lr=0.0001_bs=256_dr=0.3")
 
-    train_val_indices, test_indices = train_test_split(range(len(dataset)), test_size=0.05, random_state=42)
-    train_indices, val_indices = train_test_split(train_val_indices, test_size=0.2, random_state=42)
+    train_indices, val_indices = train_test_split(range(len(dataset)), test_size=0.2, random_state=42)
 
     train_dataset = Subset(dataset, train_indices)
     val_dataset = Subset(dataset, val_indices)
-    test_dataset = Subset(dataset, test_indices)
     train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False)
-
-    test_X, test_y = [], []
-    for batch in test_loader:
-        inputs, labels = batch
-        test_X.append(inputs.numpy())
-        test_y.append(labels.numpy())
-
-    test_X = np.concatenate(test_X, axis=0)
-    test_y = np.concatenate(test_y, axis=0)
-    np.savez_compressed("test_vector_data.npz", X=test_X, y=test_y)
 
     device = ("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using {device} device")
