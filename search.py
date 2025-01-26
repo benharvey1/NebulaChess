@@ -1,16 +1,64 @@
 import chess
 import numpy as np
 import time
+import random
 
 # TODO: Simple algorithm to check blunders
 # TODO: combine with classical valuation?
 # TODO: Add mate detector part
 # TODO: Can i increase speed of negamax so i can use higher search depth?
-# TODO: Add a transposition table - finish this
+# TODO: Add fixed size to transposition table - how to replace keys
 # TODO: properly undertsand alpha-beta pruning - make notebook
 # TODO: iterative deepening (time based search)
 # TODO: Add dynamic time limit
 # TODO: principal variation search
+
+class ZobristHash():
+
+    def __init__(self):
+        self.array = [random.getrandbits(64) for _ in range(781)]
+
+    def hash_board(self, board):
+
+        zobrist_hash = 0
+
+        # piece positions
+        for square in range(64):
+            piece = board.piece_at(square)
+            
+            if piece is not None:
+                piece_index = (piece.piece_type - 1)*2 + int(piece.color)
+                zobrist_hash ^= self.array[64*piece_index + square]
+
+        # castling
+        if board.has_kingside_castling_rights(chess.WHITE):
+            zobrist_hash ^= self.array[768]
+        if board.has_queenside_castling_rights(chess.WHITE):
+            zobrist_hash ^= self.array[768+1]
+        if board.has_kingside_castling_rights(chess.BLACK):
+            zobrist_hash ^= self.array[768+2]
+        if board.has_queenside_castling_rights(chess.BLACK):
+            zobrist_hash ^= self.array[768+3]
+
+        # en-passant
+        if board.ep_square:
+            # But only if there's actually a pawn ready to capture it. Legality
+            # of the potential capture is irrelevant.
+            if board.turn == chess.WHITE:
+                ep_mask = chess.shift_down(chess.BB_SQUARES[board.ep_square])
+            else:
+                ep_mask = chess.shift_up(chess.BB_SQUARES[board.ep_square])
+            ep_mask = chess.shift_left(ep_mask) | chess.shift_right(ep_mask)
+
+            if ep_mask & board.pawns & board.occupied_co[board.turn]:
+                zobrist_hash^= self.array[772 + chess.square_file(board.ep_square)]
+
+        # turn
+        if board.turn == chess.WHITE:
+            zobrist_hash ^= self.array[780]
+
+        return zobrist_hash
+
 
 class TranspositionTable():
 
@@ -34,6 +82,7 @@ class Search():
     def __init__(self):
 
         self.TranspositionTable = TranspositionTable()
+        self.zobrist = ZobristHash()
 
     def negamax(self, valuator, board, depth, colour, alpha=-float('inf'), beta=float('inf'), display_move_list = False, beam_width=10, max_depth=3):
         """Function to find the best move using the Negamax algorithm with alpha-beta pruning.
@@ -61,8 +110,24 @@ class Search():
             with corresponding scores. 
                 The best move is a `chess.Board.move` object representing the optimal move for the player.
         """
-        #board_hash = hash(board.fen())    # implement zobrist hash
-        
+        zobrist_hash = self.zobrist.hash_board(board)    # implement zobrist hash
+        entry = self.TranspositionTable.lookup(zobrist_hash, depth)
+
+        if entry is not None:
+            if entry['flag'] == 'EXACT':
+                return entry['value'], entry['best_move'], None
+            
+            elif entry['flag'] == 'LOWER':
+                # value is a lower bound so know we can achieve a score of at least this
+                alpha = max(alpha, entry['value'])
+
+            elif entry['flag'] == 'UPPER':
+                beta = min(beta, entry['value'])
+            
+            if alpha >= beta:
+                return entry['value'], entry['best_move'], None
+
+
         moves = list(board.legal_moves)  # Get all legal moves for the current player
         scores = []
 
@@ -136,8 +201,27 @@ class Search():
             # Therefore, best move is always one with highest value (independent of colour) 
             all_move_scores.sort(key=lambda x: x[1], reverse=True)
 
-        # If we have exact value of position we store it in the transposition table with label 'exact'
-        # If position was 
+        # flag = 'EXACT' if position is evaluated exactly (i.e. alpha < beta).
+  
+        # flag = 'LOWER' if value >= beta. Indicates that the search found something that was "too good".
+        # Opponent has some way, already found by the search, of avoiding this position, so you have to assume that they'll do this.
+        # value is a lower bound on exact value of node.
+
+        # flag = 'UPPER' if value <= alpha. Position was not good enough for us.
+        # value is an upper bound on exact value of node.
+
+        flag = None
+
+        if max_value >= beta:
+            flag = 'LOWER'
+
+        elif max_value <= alpha:
+            flag = 'UPPER'
+
+        else:
+            flag = 'EXACT'
+
+        self.TranspositionTable.store(zobrist_hash, depth, max_value, best_move, flag)
           
         return max_value, best_move, all_move_scores
 
