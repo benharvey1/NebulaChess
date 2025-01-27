@@ -5,15 +5,23 @@ import time
 from Evaluation_functions import MLPValuator, ClassicValuator
 from search import Search
 
+# TODO: add dynamic time limit
+
 search = Search()
 
-def engine_move(valuator, board, depth, colour, print_statements=True):
+def time_for_move(increment, time_remaining, number_moves):
+
+    estimated_moves_left = max(100 - number_moves, 10)
+    return increment + time_remaining/estimated_moves_left
+
+def engine_move(valuator, board, colour, increment, time_remaining, number_moves, print_statements=True):
 
     if print_statements:
         print("Engine is thinking...")
 
     t1 = time.time()
-    best_move, all_moves = search.move(valuator, board, depth, colour)
+    time_limit = time_for_move(increment, time_remaining, number_moves)
+    best_move, all_moves = search.move(valuator, board, colour, time_limit)
     t2 = time.time()
     t = t2 - t1
     
@@ -81,13 +89,14 @@ def print_unicode_board(board, perspective):
         print(f" {sc}   h g f e d c b a  {ec}\n")
 
 
-def play_game(valuator, depth):
+def play_game(valuator):
     """Main loop to play against engine"""
 
     # TODO: need to implement some kind of mate checker
     # for both offense and defense
     
     board = chess.Board()
+    number_engine_moves = 0
 
     # Ask the user for their preferred color
     while True:
@@ -103,10 +112,19 @@ def play_game(valuator, depth):
         else:
             print("Invalid input. Please type WHITE or BLACK.")
 
+    
+    engine_time = int(input("Please enter the inital time for the engine in seconds: "))
+    increment = int(input("Please enter the time increment for the engine in seconds: "))
+
     print("\nGame Start! Here is the initial board:")
     print_unicode_board(board, perspective=user_colour)
 
     while not board.is_game_over():
+
+        if engine_time <= 0:
+            print("\n The engine has run out of time. You win")
+            break
+        
 
         if board.turn == user_colour:
             print("\nYour move:")
@@ -114,7 +132,15 @@ def play_game(valuator, depth):
 
         else:
             print("\nEngine's move.")
-            _ = engine_move(valuator, board, depth, 2*int(engine_colour)-1)
+            engine_start_time = time.time()
+            _ = engine_move(valuator, board, 2*int(engine_colour)-1, increment, engine_time, number_engine_moves)
+            engine_end_time = time.time()
+
+            elapsed_time = engine_end_time - engine_start_time
+            engine_time -= elapsed_time
+            engine_time += increment
+
+            number_engine_moves += 1
 
         print_unicode_board(board, perspective=user_colour)
 
@@ -146,7 +172,7 @@ def play_game(valuator, depth):
 if __name__ == "__main__":
     v = MLPValuator('MLP_final.pth')
     c = ClassicValuator()
-    play_game(v, 1)
+    play_game(v)
     
 
 

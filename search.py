@@ -84,7 +84,7 @@ class Search():
         self.TranspositionTable = TranspositionTable()
         self.zobrist = ZobristHash()
 
-    def negamax(self, valuator, board, depth, colour, alpha=-float('inf'), beta=float('inf'), display_move_list = False, beam_width=10, max_depth=3):
+    def negamax(self, start_time, time_limit, valuator, board, depth, colour, alpha=-float('inf'), beta=float('inf'), display_move_list = False, beam_width=10, max_depth=3):
         """Function to find the best move using the Negamax algorithm with alpha-beta pruning.
         
         Negamax is a variant of the minimax algorithm that exploits the fact that in a 
@@ -110,6 +110,10 @@ class Search():
             with corresponding scores. 
                 The best move is a `chess.Board.move` object representing the optimal move for the player.
         """
+        # if cannot complete search in time limit we resort back to search at lower depth
+        if time.time() - start_time >= time_limit:
+                return None, None, None
+        
         zobrist_hash = self.zobrist.hash_board(board)    # implement zobrist hash
         entry = self.TranspositionTable.lookup(zobrist_hash, depth)
 
@@ -164,6 +168,7 @@ class Search():
         all_move_scores = [] if display_move_list else None
 
         for score, move in ordered_moves:
+
             if depth == 0:
                 value = score*colour    # multiply score by colour so best value is always the largest
             
@@ -174,7 +179,7 @@ class Search():
 
                 # Recursively call negamax for the new board, and negate the returned value
                 # The value is negated because we are switching perspectives between the two players.
-                value, _ , _ = self.negamax(valuator, new_board, depth-1, -colour, -beta, -alpha, display_move_list, beam_width, max_depth)
+                value, _ , _ = self.negamax(start_time, time_limit, valuator, new_board, depth-1, -colour, -beta, -alpha, display_move_list, beam_width, max_depth)
                 value = -value
 
             if display_move_list:
@@ -195,7 +200,7 @@ class Search():
             # If alpha >= beta, we can stop searching further down this branch 
             if alpha >= beta:
                 break
-        
+
         if display_move_list:
             # we don't sort based on colour here since value = score * colour
             # Therefore, best move is always one with highest value (independent of colour) 
@@ -227,7 +232,7 @@ class Search():
 
 
 
-    def iterative_deepening(self, valuator, board, time_limit, colour, alpha=-float('inf'), beta=float('inf'), display_move_list=False, beam_width=10, max_depth=3):
+    def iterative_deepening(self, valuator, board, time_limit, colour, alpha=-float('inf'), beta=float('inf'), display_move_list=False, beam_width=10, maximum_depth=5):
         """
         Function to find the best move using the Negamax algorithm with alpha-beta pruning
         and iterative deepening, based on a time limit.
@@ -251,14 +256,14 @@ class Search():
         best_score = -float('inf')
         all_move_scores = []
 
-        for depth in range(0, max_depth + 1):
-            elapsed_time = time.time() - start_time
-            if elapsed_time >= time_limit:
+        for depth in range(0, maximum_depth + 1):
+            #print(f'depth: {depth}, time: {elapsed_time}')
+            if time.time() - start_time >= time_limit:
                 break
 
             # Call the negamax function for the current depth
             current_score, current_best_move, current_all_scores = self.negamax(
-                valuator, board, depth, colour, alpha, beta, display_move_list, beam_width, max_depth
+                start_time, time_limit, valuator, board, depth, colour, alpha, beta, display_move_list, beam_width, max_depth=depth
             )
 
             if current_best_move:
@@ -274,10 +279,11 @@ class Search():
         return best_score, best_move, all_move_scores if display_move_list else None
     
 
-    def move(self, valuator, board, depth, colour):
+    def move(self, valuator, board, colour, time_limit):
         """Get the engine's move"""
 
-        score, best_move, all_moves = self.negamax(valuator, board, depth, colour, max_depth=depth, display_move_list=True)
+        score, best_move, all_moves = self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5, display_move_list=True)
         board.push(best_move)
+        #print(self.TranspositionTable.table)
 
         return best_move, all_moves
