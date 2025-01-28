@@ -5,8 +5,6 @@ import time
 from Evaluation_functions import MLPValuator, ClassicValuator
 from search import Search
 
-# TODO: add dynamic time limit
-
 search = Search()
 
 def time_for_move(increment, time_remaining, number_moves):
@@ -21,24 +19,16 @@ def engine_move(valuator, board, colour, increment, time_remaining, number_moves
 
     t1 = time.time()
     time_limit = time_for_move(increment, time_remaining, number_moves)
-    best_move, all_moves = search.move(valuator, board, colour, time_limit)
+    best_move = search.move(valuator, board, colour, time_limit)
+    
     t2 = time.time()
     t = t2 - t1
-    
-    if all_moves is not None:
-        top_moves = []
-        for i, (move, eval_score) in enumerate(all_moves[:10]):
-            top_moves.append(f"{move.uci()}")
 
     if print_statements:
-        print("Engine's top 10 moves: " + ", ".join(top_moves))
         print(f"Explored {valuator.count} nodes explored in {t:.3f} seconds")
         valuator.reset()
         print(f"Engine played {best_move.uci()}")
-        
-    if all_moves is not None:
-        return top_moves
-
+    
 
 
 def get_user_move(board):
@@ -133,7 +123,7 @@ def play_game(valuator):
         else:
             print("\nEngine's move.")
             engine_start_time = time.time()
-            _ = engine_move(valuator, board, 2*int(engine_colour)-1, increment, engine_time, number_engine_moves)
+            engine_move(valuator, board, 2*int(engine_colour)-1, increment, engine_time, number_engine_moves)
             engine_end_time = time.time()
 
             elapsed_time = engine_end_time - engine_start_time
