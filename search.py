@@ -112,7 +112,7 @@ class Search():
         """
         # if cannot complete search in time limit we resort back to search at lower depth
         if time.time() - start_time >= time_limit:
-                return None, None, None
+            return None
         
         zobrist_hash = self.zobrist.hash_board(board)    # implement zobrist hash
         entry = self.TranspositionTable.lookup(zobrist_hash, depth)
@@ -169,6 +169,9 @@ class Search():
 
         for score, move in ordered_moves:
 
+            if time.time() - start_time >= time_limit:
+                return None
+
             if depth == 0:
                 value = score*colour    # multiply score by colour so best value is always the largest
             
@@ -179,7 +182,12 @@ class Search():
 
                 # Recursively call negamax for the new board, and negate the returned value
                 # The value is negated because we are switching perspectives between the two players.
-                value, _ , _ = self.negamax(start_time, time_limit, valuator, new_board, depth-1, -colour, -beta, -alpha, display_move_list, beam_width, max_depth)
+                result = self.negamax(start_time, time_limit, valuator, new_board, depth-1, -colour, -beta, -alpha, display_move_list, beam_width, max_depth)
+
+                if result is None:
+                    return None
+
+                value, _ , _ = result
                 value = -value
 
             if display_move_list:
@@ -262,13 +270,19 @@ class Search():
                 break
 
             # Call the negamax function for the current depth
-            current_score, current_best_move, current_all_scores = self.negamax(
+            result = self.negamax(
                 start_time, time_limit, valuator, board, depth, colour, alpha, beta, display_move_list, beam_width, max_depth=depth
             )
+
+            if result is None:
+                break
+            
+            current_score, current_best_move, current_all_scores = result
 
             if current_best_move:
                 best_move = current_best_move
                 best_score = current_score
+                
                 if display_move_list:
                     all_move_scores = current_all_scores
 
