@@ -42,7 +42,7 @@ class MLPValuator(BaseValuator):
 
     def __init__(self, path):
         """Initializes the NetValuator by loading the trained neural network model."""
-        super.__init__()
+        super().__init__()
         self.model = MLP()
         self.path = path
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -76,7 +76,7 @@ class ClassicValuator(BaseValuator):
     
     def __init__(self):
         
-        super.__init__()
+        super().__init__()
         self.piece_values = {"P":100, "N":320, "B":330, "R":500, "Q":900, "K":20000, "K_endgame":20000,
                              "p":100, "n":320, "b":330, "r":500, "q":900, "k":20000, "k_endgame":20000}
         
