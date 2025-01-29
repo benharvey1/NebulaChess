@@ -2,6 +2,7 @@ import chess
 import numpy as np
 import time
 import random
+from base_search import BaseSearch
 
 # TODO: Add fixed size to transposition table - how to replace keys
 # TODO: principal variation search
@@ -71,10 +72,11 @@ class TranspositionTable():
         return self.table.get(zobrist_hash, None)
 
 
-class Search():
+class Searchv3(BaseSearch):
 
     def __init__(self):
 
+        super().__init__()
         self.TranspositionTable = TranspositionTable()
         self.zobrist = ZobristHash()
 
@@ -276,24 +278,20 @@ class Search():
         return alpha
 
 
-    def iterative_deepening(self, valuator, board, time_limit, colour, alpha=-float('inf'), beta=float('inf'), display_move_list=False, beam_width=10, maximum_depth=5):
+    def iterative_deepening(self, valuator, board, time_limit, colour, maximum_depth=5):
         """
         Function to find the best move using the Negamax algorithm with alpha-beta pruning
         and iterative deepening, based on a time limit.
         
         Args:
+            valuator: Evaluation function instance 
             board: Current board position (a `chess.Board` object).
             time_limit (float): Maximum time allowed for computation (in seconds).
             colour (int): The color of the player making the move (1 for WHITE, -1 for BLACK).
-            alpha (int): The best score that the current player can guarantee so far.
-            beta (int): The best score that the opponent can guarantee so far.
-            display_move_list (bool): If True, function returns a list of moves with valuations 
-                                    from the player's perspective.
-            beam_width (int): Width of beam search.
             max_depth (int): The maximum depth to explore.
 
         Returns:
-            tuple: Best score, best move, and optionally the list of all move scores.
+            tuple: Best move
         """
         start_time = time.time()  # Record start time
         best_move = None
@@ -323,7 +321,6 @@ class Search():
         """Get the engine's move"""
 
         best_move= self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
-        board.push(best_move)
         #print(len(self.TranspositionTable.table))
 
         return best_move
