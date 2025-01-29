@@ -3,12 +3,35 @@ from Board_State import State
 import torch
 import numpy as np
 from train_MLP import MLP
+from abc import ABC, abstractmethod
 
 # TODO: Improve Classical valuator function
 # TODO: Add CNN valuator function
 # TODO: Simple algorithm to check blunders
 
-class MLPValuator:
+class BaseValuator(ABC):
+    """ Abstract base class for chess board evaluators. """
+
+    def __init__(self):
+        self.count = 0
+
+    @abstractmethod
+    def __call__(self, board):
+        """Evaluates the given chess board position.
+        
+        Args:
+            board (chess.Board): The chess board position to evaluate.
+
+        Returns:
+            float: The evaluation score of the position.
+        """
+        pass
+
+    def reset(self):
+        """Resets the node count."""
+        self.count = 0
+
+class MLPValuator(BaseValuator):
     """ Class to evaluate chess board positions using a trained neural network model.
     
         Attributes:
@@ -19,13 +42,13 @@ class MLPValuator:
 
     def __init__(self, path):
         """Initializes the NetValuator by loading the trained neural network model."""
+        super.__init__()
         self.model = MLP()
         self.path = path
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model.load_state_dict(torch.load(path, map_location=self.device, weights_only=True))
         self.model.eval()
         self.model.to(self.device)
-        self.count = 0
 
     def __call__(self, board):
         """Evaluates the given chess board position using the neural network.
@@ -40,11 +63,9 @@ class MLPValuator:
         score = self.model(state).item()
         self.count += 1
         return score
+   
     
-    def reset(self):
-        self.count = 0
-    
-class ClassicValuator:
+class ClassicValuator(BaseValuator):
     """Class to evaluate chess board position using a simple classical valuator
     
         Attributes:
@@ -55,7 +76,7 @@ class ClassicValuator:
     
     def __init__(self):
         
-        self.count = 0
+        super.__init__()
         self.piece_values = {"P":100, "N":320, "B":330, "R":500, "Q":900, "K":20000, "K_endgame":20000,
                              "p":100, "n":320, "b":330, "r":500, "q":900, "k":20000, "k_endgame":20000}
         
@@ -316,8 +337,6 @@ class ClassicValuator:
 
         return (white_score - black_score) + mobility
         
-    def reset(self):
-        self.count = 0
 
 if __name__ == "__main__":
     v = MLPValuator('MLP.pth')
