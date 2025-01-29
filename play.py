@@ -17,13 +17,13 @@ class Engine():
         self.search = search
         self.number_moves = 0
 
-    def move(self, valuator, board, colour, time_limit, print_statements=True):
+    def move(self, board, colour, time_limit, print_statements=True):
 
         if print_statements:
             print("Engine is thinking...")
 
         t1 = time.time()
-        best_move = self.search.move(valuator, board, colour, time_limit)
+        best_move = self.search.move(self.valuator, board, colour, time_limit)
         board.push(best_move)
         self.number_moves += 1
         
@@ -31,8 +31,8 @@ class Engine():
         t = t2 - t1
 
         if print_statements:
-            print(f"Explored {valuator.count} nodes explored in {t:.3f} seconds")
-            valuator.reset()
+            print(f"Explored {self.valuator.count} nodes explored in {t:.3f} seconds")
+            self.valuator.reset()
             print(f"Engine played {best_move.uci()}")
 
 
@@ -141,7 +141,7 @@ def play_game(valuator, search):
             print("\nEngine's move.")
             time_limit = time_for_move(increment, engine_time, engine.number_moves)
             engine_start_time = time.time()
-            engine.move(valuator, board, 2*int(engine_colour)-1, time_limit)
+            engine.move(board, 2*int(engine_colour)-1, time_limit)
             engine_end_time = time.time()
 
             elapsed_time = engine_end_time - engine_start_time
