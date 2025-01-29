@@ -2,7 +2,7 @@ import chess
 import numpy as np
 import time
 import random
-from base_search import BaseSearch
+from src.base_search import BaseSearch
 
 # TODO: Add fixed size to transposition table - how to replace keys
 # TODO: principal variation search

@@ -2,11 +2,11 @@ import chess
 import chess.svg
 import numpy as np
 import time
-from Evaluation_functions import MLPValuator, ClassicValuator, BaseValuator
-from base_search import BaseSearch
-from search_v1 import Searchv1
-from search_v2 import Searchv2
-from search_v3 import Searchv3
+from src.Evaluation_functions import MLPValuator, ClassicValuator, BaseValuator
+from src.base_search import BaseSearch
+from src.search_v1 import Searchv1
+from src.search_v2 import Searchv2
+from src.search_v3 import Searchv3
 
 
 class Engine():
@@ -178,7 +178,7 @@ def play_game(valuator, search):
 
 
 if __name__ == "__main__":
-    v = MLPValuator('MLP_final.pth')
+    v = MLPValuator('models/MLP_final.pth')
     s = Searchv3()
     c = ClassicValuator()
     play_game(v, s)

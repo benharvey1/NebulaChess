@@ -2,7 +2,7 @@ import chess
 import numpy as np
 import time
 import random
-from base_search import BaseSearch
+from src.base_search import BaseSearch
 
 # Version 2 of the Search
 # Implemented Transposition table with Zobrist Hashing
