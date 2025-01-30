@@ -131,7 +131,6 @@ class Searchv1(BaseSearch):
             """
             start_time = time.time()  # Record start time
             best_move = None
-            best_score = -float('inf')
 
             for depth in range(0, maximum_depth + 1):
                 elapsed_time = time.time() - start_time
@@ -149,13 +148,12 @@ class Searchv1(BaseSearch):
 
                 if current_best_move:
                     best_move = current_best_move
-                    best_score = current_score
 
                 # Check if time is up after processing this depth
                 if time.time() - start_time >= time_limit:
                     break
 
-            return best_score, best_move
+            return best_move
     
 
     def move(self, valuator, board, colour, time_limit):
