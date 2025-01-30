@@ -1,7 +1,7 @@
 import chess
 import numpy as np
 import time
-from src.base_search import BaseSearch
+from base_search import BaseSearch
 
 # Version 1 of the search
 

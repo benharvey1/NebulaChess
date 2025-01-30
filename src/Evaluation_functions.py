@@ -1,8 +1,8 @@
 import chess
-from src.Board_State import State
+from Board_State import State
 import torch
 import numpy as np
-from src.train_MLP import MLP
+from train_MLP import MLP
 from abc import ABC, abstractmethod
 
 # TODO: Improve Classical valuator function

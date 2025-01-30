@@ -63,12 +63,22 @@ def play_match(engine1, engine2, fen, time_per_game, increment):
 
     return result1, result2
 
-fens = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", ]
+fens = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", # starting
+        "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 1", # Ruy Lopez
+        "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1", # Giuoco Piano Game
+        "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 1", # 4 knights Game
+        "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 0 1" # Queen's Gambit declined: Queen's Knight Variation
+        "rnbqkbnr/pp2pppp/3p4/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1", # Scicilian Defense
+        "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1", # Italian Game: Two Knights Defense
+        "rnbqkb1r/pppppp1p/5np1/8/3P1B2/2N5/PPP1PPPP/R2QKBNR b KQkq - 0 1", # Indian Game
+        "rnbqkb1r/pp2pppp/2p2n2/3p4/2PP4/5N2/PP2PPPP/RNBQKB1R w KQkq - 0 1", # Slav Defense: Modern Line
+        "rnbqkb1r/ppp1pppp/5n2/8/2pP4/5N2/PP2PPPP/RNBQKB1R w KQkq - 0 1", # Queens's Gambit accepted
+        ]
 
 if __name__ == "__main__":
 
-    valuator_1_path = 'models/MLP_final.pth'
-    valuator_2_path = 'models/MLP_final.pth'
+    valuator_1_path = 'models/MLP_v1.pth'
+    valuator_2_path = 'models/MLP_v6.pth'
 
     e1 = Engine(MLPValuator(valuator_1_path), Searchv1())
     e2 = Engine(MLPValuator(valuator_2_path), Searchv2())
@@ -115,11 +125,15 @@ if __name__ == "__main__":
     "Engine 2 Wins": results["engine2_wins"],
     "Engine 2 Name": engine2_name}
 
+    new_row_df = pd.DataFrame([new_row])
+
     csv_filename = "Data/engine_comparison_results.csv"
 
-    df = pd.read_csv(csv_filename)
-    df = df.append(new_row, ignore_index=True)
-    df.to_csv(csv_filename, index=False)
+    if os.path.exists(csv_filename):
+        df = pd.read_csv(csv_filename)
+        df = pd.concat([df, new_row_df], ignore_index=True)
+    else:
+        df = new_row_df
 
     print(f"Results saved to '{csv_filename}'")
     print(f"\nFinal Tally:\n{results}")

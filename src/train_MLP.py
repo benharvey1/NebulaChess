@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-from src.chess_dataset import ChessDataset
+from chess_dataset import ChessDataset
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
