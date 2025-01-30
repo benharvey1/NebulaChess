@@ -225,7 +225,7 @@ class Searchv2(BaseSearch):
 
 
 
-    def iterative_deepening(self, valuator, board, time_limit, colour, alpha=-float('inf'), beta=float('inf'), beam_width=10, max_depth=3):
+    def iterative_deepening(self, valuator, board, time_limit, colour, alpha=-float('inf'), beta=float('inf'), beam_width=10, maximum_depth=5):
         """
         Function to find the best move using the Negamax algorithm with alpha-beta pruning
         and iterative deepening, based on a time limit.
@@ -247,14 +247,14 @@ class Searchv2(BaseSearch):
         best_move = None
         best_score = -float('inf')
 
-        for depth in range(0, max_depth + 1):
+        for depth in range(0, maximum_depth + 1):
             elapsed_time = time.time() - start_time
             if elapsed_time >= time_limit:
                 break
 
             # Call the negamax function for the current depth
             result = self.negamax( start_time, time_limit,
-                valuator, board, depth, colour, alpha, beta, beam_width, max_depth
+                valuator, board, depth, colour, alpha, beta, beam_width, max_depth=depth
             )
 
             if result is None:
@@ -273,9 +273,9 @@ class Searchv2(BaseSearch):
         return best_score, best_move
     
 
-    def move(self, valuator, board, depth, colour):
+    def move(self, valuator, board, colour, time_limit):
         """Get the engine's move"""
 
-        score, best_move = self.negamax(valuator, board, depth, colour, max_depth=depth)
+        best_move= self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
 
         return best_move
