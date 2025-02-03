@@ -1,6 +1,7 @@
 import chess
 import numpy as np
 import time
+import random
 from base_search import BaseSearch
 
 # Version 1 of the search
@@ -45,7 +46,7 @@ class Searchv1(BaseSearch):
             
             # Check if it's a checkmate, stalemate, insufficient material, or draw condition
             if new_board.is_checkmate():
-                scores.append(-0.999 if colour == 1 else 0.999)
+                scores.append(colour)
             
             elif new_board.is_stalemate() or new_board.is_insufficient_material() or new_board.is_seventyfive_moves():
                 scores.append(0)  # Draw scenario
@@ -77,7 +78,7 @@ class Searchv1(BaseSearch):
             
             if depth == 0:
                 value = score*colour    # multiply score by colour so best value is always the largest
-            
+                
             # For each possible move, create a new board and evaluate recursively
             else:
                 new_board = board.copy()  # Make a copy of the current board state
@@ -86,7 +87,7 @@ class Searchv1(BaseSearch):
                 # Recursively call negamax for the new board, and negate the returned value
                 # The value is negated because we are switching perspectives between the two players.
                 result = self.negamax(start_time, time_limit, valuator, new_board, depth-1, -colour, -beta, -alpha, beam_width, max_depth)
-
+                
                 if result is None:
                     return None
                 
@@ -152,6 +153,9 @@ class Searchv1(BaseSearch):
                 # Check if time is up after processing this depth
                 if time.time() - start_time >= time_limit:
                     break
+
+            if best_move is None:
+                best_move = random.choice(list(board.legal_moves))
 
             return best_move
     

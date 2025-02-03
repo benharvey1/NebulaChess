@@ -3,56 +3,10 @@ import numpy as np
 import time
 import random
 from base_search import BaseSearch
+from zobrist import ZobristHash
 
 # Version 2 of the Search
 # Implemented Transposition table with Zobrist Hashing
-
-class ZobristHash():
-
-    def __init__(self):
-        self.array = [random.getrandbits(64) for _ in range(781)]
-
-    def hash_board(self, board):
-
-        zobrist_hash = 0
-
-        # piece positions
-        for square in range(64):
-            piece = board.piece_at(square)
-            
-            if piece is not None:
-                piece_index = (piece.piece_type - 1)*2 + int(piece.color)
-                zobrist_hash ^= self.array[64*piece_index + square]
-
-        # castling
-        if board.has_kingside_castling_rights(chess.WHITE):
-            zobrist_hash ^= self.array[768]
-        if board.has_queenside_castling_rights(chess.WHITE):
-            zobrist_hash ^= self.array[768+1]
-        if board.has_kingside_castling_rights(chess.BLACK):
-            zobrist_hash ^= self.array[768+2]
-        if board.has_queenside_castling_rights(chess.BLACK):
-            zobrist_hash ^= self.array[768+3]
-
-        # en-passant
-        if board.ep_square:
-            # But only if there's actually a pawn ready to capture it. Legality
-            # of the potential capture is irrelevant.
-            if board.turn == chess.WHITE:
-                ep_mask = chess.shift_down(chess.BB_SQUARES[board.ep_square])
-            else:
-                ep_mask = chess.shift_up(chess.BB_SQUARES[board.ep_square])
-            ep_mask = chess.shift_left(ep_mask) | chess.shift_right(ep_mask)
-
-            if ep_mask & board.pawns & board.occupied_co[board.turn]:
-                zobrist_hash^= self.array[772 + chess.square_file(board.ep_square)]
-
-        # turn
-        if board.turn == chess.WHITE:
-            zobrist_hash ^= self.array[780]
-
-        return zobrist_hash
-
 
 class TranspositionTable():
 
@@ -113,7 +67,7 @@ class Searchv2(BaseSearch):
 
         if entry is not None:
             if entry['flag'] == 'EXACT':
-                return entry['value'], entry['best_move'], None
+                return entry['value'], entry['best_move']
             
             elif entry['flag'] == 'LOWER':
                 # value is a lower bound so know we can achieve a score of at least this
@@ -123,7 +77,7 @@ class Searchv2(BaseSearch):
                 beta = min(beta, entry['value'])
             
             if alpha >= beta:
-                return entry['value'], entry['best_move'], None
+                return entry['value'], entry['best_move']
 
 
         moves = list(board.legal_moves)  # Get all legal moves for the current player
@@ -135,7 +89,7 @@ class Searchv2(BaseSearch):
             
             # Check if it's a checkmate, stalemate, insufficient material, or draw condition
             if new_board.is_checkmate():
-                scores.append(-0.999 if colour == 1 else 0.999)
+                scores.append(colour)
             
             elif new_board.is_stalemate() or new_board.is_insufficient_material() or new_board.is_seventyfive_moves():
                 scores.append(0)  # Draw scenario
@@ -176,7 +130,7 @@ class Searchv2(BaseSearch):
                 # Recursively call negamax for the new board, and negate the returned value
                 # The value is negated because we are switching perspectives between the two players.
                 result = self.negamax(start_time, time_limit, valuator, new_board, depth-1, -colour, -beta, -alpha, beam_width, max_depth)
-
+    
                 if result is None:
                     return None
                 
@@ -268,12 +222,15 @@ class Searchv2(BaseSearch):
             if time.time() - start_time >= time_limit:
                 break
 
+        if best_move is None:
+            best_move = random.choice(list(board.legal_moves))
+
         return best_move
     
 
     def move(self, valuator, board, colour, time_limit):
         """Get the engine's move"""
 
-        best_move= self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
+        best_move = self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
 
         return best_move

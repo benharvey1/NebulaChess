@@ -3,58 +3,11 @@ import numpy as np
 import time
 import random
 from base_search import BaseSearch
+from zobrist import ZobristHash
 
 # TODO: Add fixed size to transposition table - how to replace keys
-# TODO: principal variation search
 # TODO: Update Zobrist hash in efficient way (using xor)
-# TODO: Iterative deepending - revert back to previous depth or use current best move?
-
-class ZobristHash():
-
-    def __init__(self):
-        self.array = [random.getrandbits(64) for _ in range(781)]
-
-    def hash_board(self, board):
-
-        zobrist_hash = 0
-
-        # piece positions
-        for square in range(64):
-            piece = board.piece_at(square)
-            
-            if piece is not None:
-                piece_index = (piece.piece_type - 1)*2 + int(piece.color)
-                zobrist_hash ^= self.array[64*piece_index + square]
-
-        # castling
-        if board.has_kingside_castling_rights(chess.WHITE):
-            zobrist_hash ^= self.array[768]
-        if board.has_queenside_castling_rights(chess.WHITE):
-            zobrist_hash ^= self.array[768+1]
-        if board.has_kingside_castling_rights(chess.BLACK):
-            zobrist_hash ^= self.array[768+2]
-        if board.has_queenside_castling_rights(chess.BLACK):
-            zobrist_hash ^= self.array[768+3]
-
-        # en-passant
-        if board.ep_square:
-            # But only if there's actually a pawn ready to capture it. Legality
-            # of the potential capture is irrelevant.
-            if board.turn == chess.WHITE:
-                ep_mask = chess.shift_down(chess.BB_SQUARES[board.ep_square])
-            else:
-                ep_mask = chess.shift_up(chess.BB_SQUARES[board.ep_square])
-            ep_mask = chess.shift_left(ep_mask) | chess.shift_right(ep_mask)
-
-            if ep_mask & board.pawns & board.occupied_co[board.turn]:
-                zobrist_hash^= self.array[772 + chess.square_file(board.ep_square)]
-
-        # turn
-        if board.turn == chess.WHITE:
-            zobrist_hash ^= self.array[780]
-
-        return zobrist_hash
-
+# TODO: prevent three fold repetition when winning
 
 class TranspositionTable():
 
@@ -80,7 +33,31 @@ class Searchv3(BaseSearch):
         self.TranspositionTable = TranspositionTable()
         self.zobrist = ZobristHash()
 
-    def root_negamax(self, start_time, time_limit, valuator, board, depth, colour):
+    def order_moves(self, board, moves, valuator, colour):
+        
+        """Returns a list of ordered moves with expected best move first."""
+
+        scores = []
+
+        for move in moves:
+            new_board = board.copy()
+            new_board.push(move)
+
+            if new_board.is_checkmate():
+                scores.append(colour)
+
+            elif new_board.is_stalemate() or new_board.is_insufficient_material() or new_board.is_seventyfive_moves():
+                scores.append(0)
+
+            else:
+                scores.append(valuator(new_board))
+
+        ordered_moves = sorted(zip(scores, moves), key=lambda x: x[0], reverse=(colour==1))
+
+        return ordered_moves
+
+    
+    def root_negamax(self, start_time, time_limit, valuator, board, depth, colour, current_best_move, current_best_score):
 
         """Wrapper function to find the best move.
 
@@ -91,63 +68,46 @@ class Searchv3(BaseSearch):
             board: Current board position (a `chess.Board` object).
             depth (int): The number of moves to look ahead in the game tree.
             colour (int): The color of the player making the move (1 for WHITE, -1 for BLACK).
+            current_best_move: The current best move
+            current_best_score: The current_highest_score
         
         Returns:
             the best move
         """
 
-        best_move = None
+        best_move = current_best_move
         max_value = -float('inf')
 
         # Move ordering
         moves = list(board.legal_moves)
-        scores = []
-        
-        for move in moves:
-            new_board = board.copy()
-            new_board.push(move)
+        ordered_moves = self.order_moves(board, moves, valuator, colour)
 
-            if new_board.is_checkmate():
-                scores.append(-0.999 if colour == 1 else 0.999)
-            
-            elif new_board.is_stalemate() or new_board.is_insufficient_material() or new_board.is_seventyfive_moves():
-                scores.append(0)
-            
-            else:
-                # would be better to simply update the hashes using xor function
-                temp_zobrist_hash = self.zobrist.hash_board(new_board)
-                entry = self.TranspositionTable.lookup(temp_zobrist_hash)
+        # Make sure best move from previous search is first in list
+        if best_move is not None:
+            for i, (score, move) in enumerate(ordered_moves):
+                if move == best_move:
+                    ordered_moves.pop(i)
+                    ordered_moves.insert(0, (current_best_score, best_move))
+                    break
 
-                if entry is not None and entry['flag'] == 'EXACT':
-                    # This is just a shallow search used for move ordering so we do not have to worry about depth
-                    # Maybe only for EXACT nodes - not sure
-                    scores.append(entry['value'])
-                else:
-                    scores.append(valuator(new_board))
 
-        ordered_moves = sorted(zip(scores, moves), key=lambda x: x[0], reverse=(colour==1))
-
-        for _, move in ordered_moves:
+        for score, move in ordered_moves:
 
             if time.time() - start_time >= time_limit:
-                return None
+                break
 
             new_board = board.copy()
             new_board.push(move)
 
-            result = self.negamax(start_time, time_limit, valuator, new_board, depth-1, -colour, alpha=-float('inf'), beta=float('inf'), beam_width=10, max_depth=depth)
-            if result is None:
-                return None
-            
-            value = -result
+            value = -self.negamax(start_time, time_limit, valuator, new_board, score, depth-1, -colour, alpha=-float('inf'), beta=float('inf'), beam_width=10, max_depth=depth-1)
 
             if value > max_value:
                 max_value = value
                 best_move = move
 
-        return best_move
+        return best_move, max_value
     
-    def negamax(self, start_time, time_limit, valuator, board, depth, colour, alpha=-float('inf'), beta=float('inf'), beam_width=10, max_depth=3):
+    def negamax(self, start_time, time_limit, valuator, board, score, depth, colour, alpha=-float('inf'), beta=float('inf'), beam_width=10, max_depth=3):
 
         """Function to find the highest move evaluation using the Negamax algorithm with alpha-beta pruning.
         
@@ -163,6 +123,7 @@ class Searchv3(BaseSearch):
             time_limit: time to find move
             valuator: evaluation function instance
             board: Current board position (a `chess.Board` object).
+            score: evaluation of board at depth=0
             depth (int): The number of moves to look ahead in the game tree.
             colour (int): The color of the player making the move (1 for WHITE, -1 for BLACK).
             alpha (int): The best score that the current player can guarantee so far.
@@ -175,7 +136,7 @@ class Searchv3(BaseSearch):
         """
 
         if time.time() - start_time >= time_limit:
-            return None
+            return alpha
         
         # Check in transposition table
         zobrist_hash = self.zobrist.hash_board(board)    # implement zobrist hash
@@ -186,16 +147,19 @@ class Searchv3(BaseSearch):
             if entry['flag'] == 'EXACT':
                 return entry['value']
             
-            elif entry['flag'] == 'LOWER' and entry['value'] >= beta:
-                return entry['value']
+            elif entry['flag'] == 'LOWER':
+                alpha = max(alpha, entry['value'])
                 
-            elif entry['flag'] == 'UPPER' and entry['value'] <= alpha:
+            elif entry['flag'] == 'UPPER':
+                beta = min(beta, entry['value'])
+
+            if alpha >= beta:
                 return entry['value']
 
         # base case 
         if depth == 0:
 
-            value = valuator(board)*colour
+            value = score*colour
 
             # add to transposition table
             self.TranspositionTable.store(zobrist_hash, depth, value, 'EXACT')
@@ -203,62 +167,29 @@ class Searchv3(BaseSearch):
             return value
         
 
-
         # Move ordering
         moves = list(board.legal_moves)
-        scores = []
-        
-        for move in moves:
-            new_board = board.copy()
-            new_board.push(move)
-
-            # Check if it's a checkmate, stalemate, insufficient material, or draw condition
-            if new_board.is_checkmate():
-                scores.append(-0.999 if colour == 1 else 0.999)
-            
-            elif new_board.is_stalemate() or new_board.is_insufficient_material() or new_board.is_seventyfive_moves():
-                scores.append(0)  # Draw scenario
-            
-            else:
-                # would be better to simply update the hashes using xor function
-                temp_zobrist_hash = self.zobrist.hash_board(new_board)
-                entry = self.TranspositionTable.lookup(temp_zobrist_hash)
-
-                if entry is not None and entry['flag'] == 'EXACT':
-                    # This is just a shallow search used for move ordering so we do not have to worry about depth
-                    # Maybe only for EXACT nodes - not sure
-                    scores.append(entry['value'])
-                else:
-                    # Otherwise, evaluate the board using the evaluator
-                    scores.append(valuator(new_board))
-
-        # Sort moves in order of decreasing/increasing score for white/black to speed up pruning
-        # i.e. search starts with best move for depth=0
-        ordered_moves = sorted(zip(scores, moves), key=lambda x: x[0], reverse=(colour==1))
+        ordered_moves = self.order_moves(board, moves, valuator, colour)
 
         # apply beam search to speed up computation
         # Stockfish top move in the top 10 moves at depth=0 around 80-90% of the time
         #effective_beam_width = min(beam_width, len(ordered_moves))
         remaining_depth = max_depth - depth
-        if remaining_depth >= 2:
+        if remaining_depth >= 1:
             effective_beam_width = min(beam_width, len(ordered_moves))
             ordered_moves = ordered_moves[:effective_beam_width]
 
 
+        flag = 'UPPER'
         # Recursive Loop    
         for score, move in ordered_moves:
-
-            flag = 'UPPER'
 
             new_board = board.copy()  # Make a copy of the current board state
             new_board.push(move)  # Apply the current move to the copied board
 
             # Recursively call negamax for the new board, and negate the returned value
             # The value is negated because we are switching perspectives between the two players.
-            result = self.negamax(start_time, time_limit, valuator, new_board, depth-1, -colour, -beta, -alpha, beam_width, max_depth)
-
-            if result is None:
-                return None
+            result = self.negamax(start_time, time_limit, valuator, new_board, score, depth-1, -colour, -beta, -alpha, beam_width, max_depth)
 
             value = -result
 
@@ -273,7 +204,7 @@ class Searchv3(BaseSearch):
                 alpha = value
                 flag = 'EXACT'
 
-            self.TranspositionTable.store(zobrist_hash, depth, alpha, flag)
+        self.TranspositionTable.store(zobrist_hash, depth, alpha, flag)
 
         return alpha
 
@@ -295,24 +226,23 @@ class Searchv3(BaseSearch):
         """
         start_time = time.time()  # Record start time
         best_move = None
+        best_value = None
 
         for depth in range(1, maximum_depth + 1):
-            #print(f'depth: {depth}, time: {elapsed_time}')
+
             if time.time() - start_time >= time_limit:
                 break
 
             # Call the negamax function for the current depth
-            result = self.root_negamax(
-                start_time, time_limit, valuator, board, depth, colour)
-
-            if result is None:
-                break
-            
-            best_move = result
+            best_move, best_value = self.root_negamax(
+                start_time, time_limit, valuator, board, depth, colour, best_move, best_value)
 
             # Check if time is up after processing this depth
             if time.time() - start_time >= time_limit:
                 break
+
+        if best_move is None:
+            best_move = random.choice(list(board.legal_moves))
         
         return best_move
     
