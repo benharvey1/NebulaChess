@@ -5,10 +5,6 @@ import random
 from base_search import BaseSearch
 from zobrist import ZobristHash
 
-# TODO: Add fixed size to transposition table - how to replace keys
-# TODO: Update Zobrist hash in efficient way (using xor)
-# TODO: prevent three fold repetition when winning
-
 class TranspositionTable():
 
     def __init__(self):
@@ -23,6 +19,9 @@ class TranspositionTable():
 
     def lookup(self, zobrist_hash):
         return self.table.get(zobrist_hash, None)
+    
+    def clear(self):
+        self.table.clear()
 
 
 class Searchv3(BaseSearch):
@@ -240,18 +239,18 @@ class Searchv3(BaseSearch):
             # Check if time is up after processing this depth
             if time.time() - start_time >= time_limit:
                 break
-
+            
         if best_move is None:
             best_move = random.choice(list(board.legal_moves))
         
         return best_move
     
 
-    def move(self, valuator, board, colour, time_limit):
+    def move(self, valuator, board, zobrist_hash, colour, time_limit):
         """Get the engine's move"""
 
         best_move= self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
         #print(len(self.TranspositionTable.table))
 
-        return best_move
+        return best_move, None
 

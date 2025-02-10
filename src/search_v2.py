@@ -217,7 +217,7 @@ class Searchv2(BaseSearch):
 
             if current_best_move:
                 best_move = current_best_move
-
+                
             # Check if time is up after processing this depth
             if time.time() - start_time >= time_limit:
                 break
@@ -228,9 +228,9 @@ class Searchv2(BaseSearch):
         return best_move
     
 
-    def move(self, valuator, board, colour, time_limit):
+    def move(self, valuator, board, zobrist_hash, colour, time_limit):
         """Get the engine's move"""
 
         best_move = self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
 
-        return best_move
+        return best_move, None

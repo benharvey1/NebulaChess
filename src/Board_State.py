@@ -64,7 +64,7 @@ class State():
         if self.board.has_queenside_castling_rights(chess.BLACK):
             board_vector[899] = 1
 
-        # Bit to denote whose turn (0=white, 1=black)
+        # Bit to denote whose turn (1=white, 0=black)
         board_vector[900] = original_turn*1.0
 
         return board_vector
@@ -135,7 +135,3 @@ class State():
         board_tensor[15, :, :] = int(original_turn)
 
         return board_tensor
-
-
-if __name__ == "__main__":
-    s = State()
