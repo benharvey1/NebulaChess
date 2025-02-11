@@ -246,11 +246,11 @@ class Searchv3(BaseSearch):
         return best_move
     
 
-    def move(self, valuator, board, zobrist_hash, colour, time_limit):
+    def move(self, valuator, board, colour, time_limit):
         """Get the engine's move"""
 
         best_move= self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
-        #print(len(self.TranspositionTable.table))
+        board.push(best_move)
 
-        return best_move, None
+        return best_move
 
