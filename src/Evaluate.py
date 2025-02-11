@@ -56,11 +56,19 @@ class MLPValuator(BaseValuator):
         Returns:
             float: The evaluation score of the position.
         """
-        state = torch.tensor(State(board).board_to_vector(), dtype=torch.float32).to(self.device)
-        state = state.unsqueeze(0)
-        score = self.model(state).item()
-        self.count += 1
-        return score
+        single_input = False
+        if isinstance(boards, chess.Board):
+            boards = [boards]
+            single_input = True
+
+        with torch.no_grad():
+            states = [State(board).board_to_vector() for board in boards]
+            state_tensor = torch.tensor(np.array(states), dtype=torch.float32).to(self.device)
+            scores = self.model(state_tensor).cpu().numpy()
+        
+        self.count += scores.shape[0]
+        
+        return scores.flatten()[0] if single_input else scores.flatten().tolist()
     
 class CNNValuator(BaseValuator):
     """ Class to evaluate chess board positions using a trained neural network model.
@@ -81,7 +89,7 @@ class CNNValuator(BaseValuator):
         self.model.eval()
         self.model.to(self.device)
 
-    def __call__(self, board):
+    def __call__(self, boards):
         """Evaluates the given chess board position using the neural network.
         Args:
             board (chess.Board): The current chess board position to evaluate.
@@ -89,11 +97,19 @@ class CNNValuator(BaseValuator):
         Returns:
             float: The evaluation score of the position.
         """
-        state = torch.tensor(State(board).board_to_tensor(), dtype=torch.float32).to(self.device)
-        state = state.unsqueeze(0)
-        score = self.model(state).item()
-        self.count += 1
-        return score
+        single_input = False
+        if isinstance(boards, chess.Board):
+            boards = [boards]
+            single_input = True
+
+        with torch.no_grad():
+            states = [State(board).board_to_tensor() for board in boards]
+            state_tensor = torch.tensor(np.array(states), dtype=torch.float32).to(self.device)
+            scores = self.model(state_tensor).cpu().numpy()
+        
+        self.count += scores.shape[0]
+        
+        return scores.flatten()[0] if single_input else scores.flatten().tolist()
    
     
 class ClassicValuator(BaseValuator):
