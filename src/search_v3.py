@@ -5,6 +5,11 @@ import random
 from base_search import BaseSearch
 from zobrist import ZobristHash
 
+# Version 3 of the Search
+# Added wrapper function for negamax
+# If time runs out mid search, best move is current best move from current search instead of best move from previous search
+# This works a lot better (as long as best move from previous search is always considered first)
+
 class TranspositionTable():
 
     def __init__(self):
@@ -56,7 +61,7 @@ class Searchv3(BaseSearch):
         return ordered_moves
 
     
-    def root_negamax(self, start_time, time_limit, valuator, board, depth, colour, current_best_move, current_best_score):
+    def root_negamax(self, start_time, time_limit, valuator, board, depth, colour, alpha, beta, current_best_move, current_best_score):
 
         """Wrapper function to find the best move.
 
@@ -89,7 +94,6 @@ class Searchv3(BaseSearch):
                     ordered_moves.insert(0, (current_best_score, best_move))
                     break
 
-
         for score, move in ordered_moves:
 
             if time.time() - start_time >= time_limit:
@@ -98,11 +102,16 @@ class Searchv3(BaseSearch):
             new_board = board.copy()
             new_board.push(move)
 
-            value = -self.negamax(start_time, time_limit, valuator, new_board, score, depth-1, -colour, alpha=-float('inf'), beta=float('inf'), beam_width=10, max_depth=depth-1)
+            value = -self.negamax(start_time, time_limit, valuator, new_board, score, depth-1, -colour, -beta, -alpha, beam_width=10, max_depth=depth-1)
 
             if value > max_value:
                 max_value = value
                 best_move = move
+
+            alpha = max(max_value, alpha)
+
+            if alpha >= beta:
+                break
 
         return best_move, max_value
     
@@ -174,7 +183,7 @@ class Searchv3(BaseSearch):
         # Stockfish top move in the top 10 moves at depth=0 around 80-90% of the time
         #effective_beam_width = min(beam_width, len(ordered_moves))
         remaining_depth = max_depth - depth
-        if remaining_depth >= 1:
+        if remaining_depth >= 0:
             effective_beam_width = min(beam_width, len(ordered_moves))
             ordered_moves = ordered_moves[:effective_beam_width]
 
@@ -234,7 +243,7 @@ class Searchv3(BaseSearch):
 
             # Call the negamax function for the current depth
             best_move, best_value = self.root_negamax(
-                start_time, time_limit, valuator, board, depth, colour, best_move, best_value)
+                start_time, time_limit, valuator, board, depth, colour, -float('inf'), float('inf'), best_move, best_value)
 
             # Check if time is up after processing this depth
             if time.time() - start_time >= time_limit:

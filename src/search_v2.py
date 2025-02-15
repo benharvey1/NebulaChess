@@ -231,7 +231,7 @@ class Searchv2(BaseSearch):
     def move(self, valuator, board, colour, time_limit):
         """Get the engine's move"""
 
-        best_move = self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
+        best_move = self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=4)
         board.push(best_move)
 
         return best_move

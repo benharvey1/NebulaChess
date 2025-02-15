@@ -146,7 +146,7 @@ class Searchv1(BaseSearch):
                     break
 
                 current_score, current_best_move = result
-
+                
                 if current_best_move:
                     best_move = current_best_move
 
@@ -163,7 +163,7 @@ class Searchv1(BaseSearch):
     def move(self, valuator, board, colour, time_limit):
         """Get the engine's move"""
 
-        best_move= self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=5)
+        best_move= self.iterative_deepening(valuator, board, time_limit, colour, maximum_depth=4)
         board.push(best_move)
 
         return best_move
