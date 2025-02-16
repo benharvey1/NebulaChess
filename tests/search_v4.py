@@ -2,20 +2,26 @@ import chess
 import numpy as np
 import time
 import random
-from base_search import BaseSearch
-from zobrist import ZobristHash
-from TranspositionTable import TranspositionTable
+import os
+import sys
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
+
+import base_search 
+import zobrist 
+import TranspositionTable
 
 # Version 4 of search
 # Added batch evaluations (much quicker) and fixed size transposition table
 
-class Searchv4(BaseSearch):
+class Searchv4(base_search.BaseSearch):
 
     def __init__(self):
 
         super().__init__()
-        self.TranspositionTable = TranspositionTable()
-        self.zobrist = ZobristHash()
+        self.TranspositionTable = TranspositionTable.TranspositionTable()
+        self.zobrist = zobrist.ZobristHash()
 
     def order_moves(self, board, moves, valuator, colour):
         
@@ -92,10 +98,11 @@ class Searchv4(BaseSearch):
             if time.time() - start_time >= time_limit:
                 break
 
-            new_board = board.copy()
-            new_board.push(move)
+            board.push(move)
 
-            value = -self.negamax(start_time, time_limit, valuator, new_board, score, depth-1, -colour, -beta, -alpha, beam_width=10, max_depth=depth-1)
+            value = -self.negamax(start_time, time_limit, valuator, board, score, depth-1, -colour, -beta, -alpha, beam_width=10, max_depth=depth-1)
+
+            board.pop()
 
             if value > max_value:
                 max_value = value
@@ -189,12 +196,13 @@ class Searchv4(BaseSearch):
         # Recursive Loop    
         for score, move in ordered_moves:
 
-            new_board = board.copy()  # Make a copy of the current board state
-            new_board.push(move)  # Apply the current move to the copied board
+            board.push(move)
 
             # Recursively call negamax for the new board, and negate the returned value
             # The value is negated because we are switching perspectives between the two players.
-            result = self.negamax(start_time, time_limit, valuator, new_board, score, depth-1, -colour, -beta, -alpha, beam_width, max_depth)
+            result = self.negamax(start_time, time_limit, valuator, board, score, depth-1, -colour, -beta, -alpha, beam_width, max_depth)
+
+            board.pop()
 
             value = -result
 

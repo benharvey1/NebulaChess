@@ -1,0 +1,7 @@
+Engine 1 Name,Engine 1 Wins,Draws,Engine 2 Wins,Engine 2 Name
+MLP_v1 + Searchv1,14,42,24,MLP_v1 + Searchv2
+MLP_v1 + Searchv2,4,31,45,MLP_v1 + Searchv3
+MLP_v1 + Searchv4,12,24,44,cnn + Searchv4
+cnn + Searchv4,29,24,27,cnn_v2 + Searchv4
+cnn + Searchv3,23,23,34,cnn + Searchv4
+

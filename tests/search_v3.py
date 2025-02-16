@@ -2,8 +2,14 @@ import chess
 import numpy as np
 import time
 import random
-from base_search import BaseSearch
-from zobrist import ZobristHash
+import os
+import sys
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
+
+import base_search
+import zobrist
 
 # Version 3 of the Search
 # Added wrapper function for negamax
@@ -29,13 +35,13 @@ class TranspositionTable():
         self.table.clear()
 
 
-class Searchv3(BaseSearch):
+class Searchv3(base_search.BaseSearch):
 
     def __init__(self):
 
         super().__init__()
         self.TranspositionTable = TranspositionTable()
-        self.zobrist = ZobristHash()
+        self.zobrist = zobrist.ZobristHash()
 
     def order_moves(self, board, moves, valuator, colour):
         
