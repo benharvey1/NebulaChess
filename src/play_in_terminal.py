@@ -2,47 +2,29 @@ import chess
 import chess.svg
 import numpy as np
 import time
-from Evaluation_functions import MLPValuator, ClassicValuator, BaseValuator
-from base_search import BaseSearch
-from search_v1 import Searchv1
-from search_v2 import Searchv2
-from search_v3 import Searchv3
+import os
+from Evaluate import CNNValuator
+from search_v5 import Searchv5
+from engine import Engine
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-class Engine():
+def engine_move(board, engine, colour, time_limit, print_statements=True):
 
-    def __init__(self, valuator: BaseValuator , search: BaseSearch):
+    if print_statements:
+        print("Engine is thinking...")
 
-        self.valuator = valuator
-        self.search = search
-        self.number_moves = 0
-
-    def move(self, board, colour, time_limit, print_statements=True):
-
-        if print_statements:
-            print("Engine is thinking...")
-
-        t1 = time.time()
-        best_move = self.search.move(self.valuator, board, colour, time_limit)
-        board.push(best_move)
-        self.number_moves += 1
+    t1 = time.time()
+    best_move = engine.move(board, colour, time_limit)
         
-        t2 = time.time()
-        t = t2 - t1
+    t2 = time.time()
+    t = t2 - t1
 
-        if print_statements:
-            print(f"Explored {self.valuator.count} nodes explored in {t:.3f} seconds")
-            self.valuator.reset()
-            print(f"Engine played {best_move.uci()}")
-
-
-
-def time_for_move(increment, time_remaining, number_moves):
-    """Returns the time available for the engine to move. 
-    Based on overall time left, game increment and number of moves."""
-
-    estimated_moves_left = max(100 - number_moves, 10)
-    return increment + time_remaining/estimated_moves_left
+    if print_statements:
+        print(f"Explored {engine.valuator.count} nodes explored in {t:.3f} seconds")
+        engine.valuator.reset()
+        print(f"Engine played {best_move.uci()}")
+    
 
 def get_user_move(board):
     """Get the users move"""
@@ -51,10 +33,10 @@ def get_user_move(board):
         uci_str = input("Input your move in UCI format: ")
     
         try:
-            move = chess.Move.from_uci(uci_str) # convert to a chess.Move object
+            move = chess.Move.from_uci(uci_str)
         
-            if move in list(board.legal_moves): # check if move legal
-                board.push(move)    # update board
+            if move in list(board.legal_moves): 
+                board.push(move)    
                 return
 
             else:
@@ -68,7 +50,6 @@ def print_unicode_board(board, perspective):
     
     """Displays board in nice way in terminal"""
 
-    # TODO: black pawns are displayed in blue - see if can fix
     sc, ec = "\x1b[0;30;107m", "\x1b[0m"
     white_square = "\x1b[48;5;253m"  
     black_square = "\x1b[48;5;245m"
@@ -94,23 +75,17 @@ def print_unicode_board(board, perspective):
         print(f" {sc}   h g f e d c b a  {ec}\n")
 
 
-
 def play_game(valuator, search):
     """Main loop to play against engine"""
-
-    # TODO: need to implement some kind of mate checker
-    # for both offense and defense
     
     board = chess.Board()
-    number_engine_moves = 0
     engine = Engine(valuator, search)
 
-    # Ask the user for their preferred color
     while True:
         user_colour_str = input("What colour do you want to play as? WHITE or BLACK: ").strip().upper()
         if user_colour_str == 'WHITE':
-            user_colour = chess.WHITE   # chess.WHITE = True
-            engine_colour = chess.BLACK # chess.BLACK = False
+            user_colour = chess.WHITE
+            engine_colour = chess.BLACK 
             break
         elif user_colour_str == 'BLACK':
             user_colour = chess.BLACK
@@ -126,7 +101,7 @@ def play_game(valuator, search):
     print("\nGame Start! Here is the initial board:")
     print_unicode_board(board, perspective=user_colour)
 
-    while not board.is_game_over():
+    while not board.is_game_over(claim_draw=True):
 
         if engine_time <= 0:
             print("\n The engine has run out of time. You win")
@@ -139,16 +114,14 @@ def play_game(valuator, search):
 
         else:
             print("\nEngine's move.")
-            time_limit = time_for_move(increment, engine_time, engine.number_moves)
+            time_limit = engine.time_for_move(engine_time, increment)
             engine_start_time = time.time()
-            engine.move(board, 2*int(engine_colour)-1, time_limit)
+            engine_move(board, engine, 2*int(engine_colour)-1, time_limit)
             engine_end_time = time.time()
 
             elapsed_time = engine_end_time - engine_start_time
             engine_time -= elapsed_time
             engine_time += increment
-
-            number_engine_moves += 1
 
         print_unicode_board(board, perspective=user_colour)
 
@@ -164,7 +137,7 @@ def play_game(valuator, search):
     elif board.is_insufficient_material():
         print("\nDraw due to insufficient material.")
 
-    elif board.is_fivefold_repetition():
+    elif board.is_fivefold_repetition() or board.can_claim_threefold_repetition():
         print("\nDraw due to repetition.")
 
     elif board.is_seventyfive_moves():
@@ -178,9 +151,9 @@ def play_game(valuator, search):
 
 
 if __name__ == "__main__":
-    v = MLPValuator('models/MLP_final.pth')
-    s = Searchv3()
-    c = ClassicValuator()
+    path = os.path.join(PROJECT_ROOT, "models/cnn.pth")
+    v = CNNValuator(path)
+    s = Searchv5()
     play_game(v, s)
     
 
