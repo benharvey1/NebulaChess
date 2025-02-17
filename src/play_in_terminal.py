@@ -4,7 +4,7 @@ import numpy as np
 import time
 import os
 from Evaluate import CNNValuator
-from search_v5 import Searchv5
+from search import Search
 from engine import Engine
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -153,7 +153,7 @@ def play_game(valuator, search):
 if __name__ == "__main__":
     path = os.path.join(PROJECT_ROOT, "models/cnn.pth")
     v = CNNValuator(path)
-    s = Searchv5()
+    s = Search()
     play_game(v, s)
     
 
