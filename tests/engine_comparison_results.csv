@@ -4,4 +4,6 @@ MLP_v1 + Searchv2,4,31,45,MLP_v1 + Searchv3
 MLP_v1 + Searchv4,12,24,44,cnn + Searchv4
 cnn + Searchv4,29,24,27,cnn_v2 + Searchv4
 cnn + Searchv3,23,23,34,cnn + Searchv4
-
+cnn + Searchv4,28,25,27,cnn + Searchv5
+cnn + Searchv4,25,27,28,cnn + Searchv5
+cnn + Searchv6,27,28,25,cnn + Searchv5
