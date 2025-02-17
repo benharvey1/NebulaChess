@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import chess
 import sys
 import logging
@@ -6,7 +8,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from engine import Engine
 from Evaluate import CNNValuator
-from search_v5 import Searchv5
+from search import Search
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 logging.basicConfig(filename="uci.log", level=logging.DEBUG)
@@ -15,7 +17,7 @@ class UCI():
 
     def __init__(self):
         self.board = chess.Board()
-        self.engine = Engine(CNNValuator(os.path.join(PROJECT_ROOT, "models/cnn.pth")), Searchv5())
+        self.engine = Engine(CNNValuator(os.path.join(PROJECT_ROOT, "models/cnn.pth")), Search())
         self.running = True
         self.command_queue = queue.Queue()
         pass
@@ -85,6 +87,7 @@ class UCI():
 
     def ucinewgame(self):
         self.board.reset()
+        self.engine.clear_table()
     
     def position(self, words):
         """ position [fen <fenstring> | startpos ]  moves <move1> .... <movei>
@@ -93,15 +96,26 @@ class UCI():
     the string "startpos" will be sent.
     """
         
-        if words[1] == "startpos" and words[2] == "moves":
+        if len(words) < 2:
+            logging.error("Invalid position command received")
+            return
+    
+        if words[1] == "startpos":
             self.board.reset()
-            [self.board.push_uci(move) for move in words[3:]]
+            if len(words) > 2 and words[2] == "moves":
+                [self.board.push_uci(move) for move in words[3:]]
+        
         elif words[1] == "fen":
-            fen = " ".join(words[2:8])
+            if len(words) < 8:
+                logging.error("Incomplete FEN position received")
+                return
+            
+            fen = " ".join(words[2:8])  
             self.board = chess.Board(fen)
+           
             if len(words) >= 9 and words[8] == "moves":
                 [self.board.push_uci(move) for move in words[9:]]
-
+                
 
     def go(self, words):
         """Handle 'go' command and extracts search parameters"""
@@ -111,10 +125,13 @@ class UCI():
             "btime": None,
             "winc": None,
             "binc": None,
+            "movetime": None
             }
         
         i = 1
         while i < len(words):
+            if words[i] == "movetime":
+                search_params["movetime"] = float(words[i+1])
             if words[i] == "wtime":
                 search_params["wtime"] = float(words[i+1])
             elif words[i] == "btime":
@@ -127,13 +144,17 @@ class UCI():
             i += 2
         
         colour = self.board.turn
-        time_key = "wtime" if colour == chess.WHITE else "btime"
-        inc_key = "winc" if colour == chess.WHITE else "binc"
 
-        time = search_params.get(time_key, 500000) / 1000  
-        increment = search_params.get(inc_key, 0) / 1000 
+        if search_params["movetime"] is not None:
+            time_for_move = max(0.5, search_params["movetime"]/1000 - 1)
 
-        time_for_move = self.engine.time_for_move(time, increment)
+        else:
+            time_key = "wtime" if colour == chess.WHITE else "btime"
+            inc_key = "winc" if colour == chess.WHITE else "binc"
+
+            time = search_params.get(time_key, 500000) / 1000  
+            increment = search_params.get(inc_key, 0) / 1000 
+            time_for_move = self.engine.time_for_move(time, increment)
 
         best_move = self.engine.move(self.board, colour, time_for_move)
         self.send_command(f"bestmove {best_move}")
@@ -141,7 +162,8 @@ class UCI():
     def quit(self):
         self.running = False
         logging.debug("Engine exit")
-        sys.exit(0)
+        sys.stdout.flush()
+        os._exit(0)
 
     def stop(self):
         pass 
