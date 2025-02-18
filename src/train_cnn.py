@@ -50,8 +50,8 @@ class ResNet(nn.Module):
         self.bn2 = nn.BatchNorm2d(1)
 
         # Dense layers
-        self.fc1 = nn.Linear(8*8, 128)
-        self.fc4 = nn.Linear(128, 1)
+        self.fc1 = nn.Linear(8*8, 256)
+        self.fc4 = nn.Linear(256, 1)
         self.dropout = nn.Dropout(0.3)
         
 
@@ -64,8 +64,8 @@ class ResNet(nn.Module):
 
         x = F.relu(self.bn2(self.conv2(x))) #input: (batch_size, 64, 8, 8), output: (batch_size, 1, 8, 8)
         x = torch.flatten(x, start_dim=1)   #input: (batch_size, 1, 8, 8), output: (batch_size, 64)
-        x = self.dropout(F.relu(self.fc1(x))) #input: (batch_size, 64), output: (batch_size, 128)
-        x = torch.tanh(self.fc4(x)) #input: (batch_size, 128), output: (batch_size, 1)
+        x = self.dropout(F.relu(self.fc1(x))) #input: (batch_size, 64), output: (batch_size, 256)
+        x = torch.tanh(self.fc4(x)) #input: (batch_size, 256), output: (batch_size, 1)
 
         return x
 

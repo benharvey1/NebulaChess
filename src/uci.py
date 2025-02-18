@@ -17,7 +17,7 @@ class UCI():
 
     def __init__(self):
         self.board = chess.Board()
-        self.engine = Engine(CNNValuator(os.path.join(PROJECT_ROOT, "models/cnn.pth")), Search())
+        self.engine = Engine(CNNValuator(os.path.join(PROJECT_ROOT, "models/cnn_v2.pth")), Search())
         self.running = True
         self.command_queue = queue.Queue()
         pass
