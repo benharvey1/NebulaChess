@@ -10,16 +10,17 @@ from search_v2 import Searchv2
 from search_v3 import Searchv3
 from search_v4 import Searchv4
 
+# This script allows to different versions of the engine to play against eachother
+
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
 
 import Evaluate
 import engine
-import play
+import search
 
 
-
-def self_play(engine_1, engine_2, engine_time, increment, starting_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', show_board=False):
+def self_play(engine_1, engine_2, engine_time, increment, starting_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'):
     """Main Loop for self play between two engines"""
     
     board = chess.Board(starting_fen)
@@ -27,9 +28,6 @@ def self_play(engine_1, engine_2, engine_time, increment, starting_fen = 'rnbqkb
     engine_2_colour = chess.BLACK
     engine_1_time = engine_time
     engine_2_time = engine_time
-    
-    if show_board:
-        play.print_unicode_board(board, perspective=engine_1_colour)
 
     while not board.is_game_over(claim_draw=True):
 
@@ -50,12 +48,6 @@ def self_play(engine_1, engine_2, engine_time, increment, starting_fen = 'rnbqkb
             elapsed_time = end_time - start_time
             engine_2_time -= elapsed_time
             engine_2_time += increment
-            
-        if show_board:
-            play.print_unicode_board(board, engine_1_colour)
-
-    if show_board: 
-        play.print_unicode_board(board, engine_1_colour)
 
     engine_1.clear_table()
     engine_2.clear_table()
@@ -70,8 +62,8 @@ def play_match(engine1, engine2, fen, time_per_game, increment):
     """Plays two games for a given FEN, swapping colors."""
 
 
-    result1 = self_play(engine1, engine2, time_per_game, increment, starting_fen=fen, show_board=False)
-    result2 = self_play(engine2, engine1, time_per_game, increment, starting_fen=fen, show_board=False)
+    result1 = self_play(engine1, engine2, time_per_game, increment, starting_fen=fen)
+    result2 = self_play(engine2, engine1, time_per_game, increment, starting_fen=fen)
 
     return result1, result2
 
@@ -87,16 +79,16 @@ def read_fens(file_path):
 if __name__ == "__main__":
 
     valuator_1_path = os.path.join(PROJECT_ROOT, "models/cnn.pth")
-    valuator_2_path = os.path.join(PROJECT_ROOT, "models/cnn.pth")
+    valuator_2_path = os.path.join(PROJECT_ROOT, "models/cnn_v2.pth")
 
-    e1 = engine.Engine(Evaluate.CNNValuator(valuator_1_path), Searchv4())
-    e2 = engine.Engine(Evaluate.CNNValuator(valuator_1_path), Searchv5())
+    e1 = engine.Engine(Evaluate.CNNValuator(valuator_2_path), Searchv4())
+    e2 = engine.Engine(Evaluate.CNNValuator(valuator_2_path), search.Search())
 
     engine1_name = f"{os.path.splitext(os.path.basename(valuator_1_path))[0]} + {e1.search.__class__.__name__}"
     engine2_name = f"{os.path.splitext(os.path.basename(valuator_2_path))[0]} + {e2.search.__class__.__name__}"
 
     time_per_game = 1
-    increment = 3
+    increment = 1
 
     fens = read_fens(os.path.join(PROJECT_ROOT, "tests/openings.txt"))
     results = {"engine1_wins": 0, "engine2_wins": 0, "draws": 0}

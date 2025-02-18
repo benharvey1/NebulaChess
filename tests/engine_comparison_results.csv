@@ -7,3 +7,4 @@ cnn + Searchv3,23,23,34,cnn + Searchv4
 cnn + Searchv4,28,25,27,cnn + Searchv5
 cnn + Searchv4,25,27,28,cnn + Searchv5
 cnn + Searchv6,27,28,25,cnn + Searchv5
+cnn + Search,15,31,34,cnn_v2 + Search
